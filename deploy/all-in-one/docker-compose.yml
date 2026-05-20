@@ -27,6 +27,7 @@ services:
     environment:
       DB_HOST: database
       ASPNETCORE_URLS: http://+:8080
+      RESOLVE_IP: loopback
     working_dir: /app/
     volumes:
       - ./.htpasswd:/etc/nginx/.htpasswd
