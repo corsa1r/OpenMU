@@ -1099,11 +1099,13 @@ public static class ConnectionExtensions
     /// <param name="shieldStatus">Gets or sets the status of the remaining shield in fractions of 1/250.</param>
     /// <param name="healthDamage">The health damage.</param>
     /// <param name="shieldDamage">The shield damage.</param>
+    /// <param name="currentHealth">The actual current health points of the target.</param>
+    /// <param name="maximumHealth">The maximum health points of the target.</param>
     /// <remarks>
     /// Is sent by the server when: An object got hit in two cases: 1. When the own player is hit; 2. When the own player attacked some other object which got hit.
     /// Causes reaction on client side: The damage is shown at the object which received the hit.
     /// </remarks>
-    public static async ValueTask SendObjectHitExtendedAsync(this IConnection? connection, DamageKind @kind, bool @isRageFighterStreakHit, bool @isRageFighterStreakFinalHit, bool @isDoubleDamage, bool @isTripleDamage, ushort @objectId, byte @healthStatus, byte @shieldStatus, uint @healthDamage, uint @shieldDamage)
+    public static async ValueTask SendObjectHitExtendedAsync(this IConnection? connection, DamageKind @kind, bool @isRageFighterStreakHit, bool @isRageFighterStreakFinalHit, bool @isDoubleDamage, bool @isTripleDamage, ushort @objectId, byte @healthStatus, byte @shieldStatus, uint @healthDamage, uint @shieldDamage, uint @currentHealth, uint @maximumHealth)
     {
         if (connection is null)
         {
@@ -1124,6 +1126,8 @@ public static class ConnectionExtensions
             packet.ShieldStatus = @shieldStatus;
             packet.HealthDamage = @healthDamage;
             packet.ShieldDamage = @shieldDamage;
+            packet.CurrentHealth = @currentHealth;
+            packet.MaximumHealth = @maximumHealth;
 
             return packet.Header.Length;
         }

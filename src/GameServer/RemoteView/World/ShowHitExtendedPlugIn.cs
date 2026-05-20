@@ -51,6 +51,8 @@ public class ShowHitExtendedPlugIn : IShowHitPlugIn
         var healthStatus = this.CalcStatStatus(target, Stats.CurrentHealth, Stats.MaximumHealth);
         var shieldStatus = this.CalcStatStatus(target, Stats.CurrentShield, Stats.MaximumShield);
         var targetId = target.GetId(this._player);
+        var currentHealth = (uint)Math.Max(0, target.Attributes[Stats.CurrentHealth]);
+        var maximumHealth = (uint)Math.Max(0, target.Attributes[Stats.MaximumHealth]);
         await connection.SendObjectHitExtendedAsync(
             this.GetDamageKind(hitInfo.Attributes),
             hitInfo.Attributes.HasFlag(DamageAttributes.RageFighterStreakHit),
@@ -61,7 +63,9 @@ public class ShowHitExtendedPlugIn : IShowHitPlugIn
             healthStatus,
             shieldStatus,
             hitInfo.HealthDamage,
-            hitInfo.ShieldDamage).ConfigureAwait(false);
+            hitInfo.ShieldDamage,
+            currentHealth,
+            maximumHealth).ConfigureAwait(false);
     }
 
     private byte CalcStatStatus(IAttackable target, AttributeDefinition currentStat, AttributeDefinition maximumStat)

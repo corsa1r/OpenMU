@@ -2403,7 +2403,7 @@
       <HeaderType>C1Header</HeaderType>
       <Code>11</Code>
       <Name>ObjectHitExtended</Name>
-      <Length>16</Length>
+      <Length>24</Length>
       <Direction>ServerToClient</Direction>
       <SentWhen>An object got hit in two cases: 1. When the own player is hit; 2. When the own player attacked some other object which got hit.</SentWhen>
       <CausedReaction>The damage is shown at the object which received the hit.</CausedReaction>
@@ -2467,6 +2467,18 @@
           <Index>12</Index>
           <Type>IntegerLittleEndian</Type>
           <Name>ShieldDamage</Name>
+        </Field>
+        <Field>
+          <Index>16</Index>
+          <Type>IntegerLittleEndian</Type>
+          <Name>CurrentHealth</Name>
+          <Description>Actual current health points of the target.</Description>
+        </Field>
+        <Field>
+          <Index>20</Index>
+          <Type>IntegerLittleEndian</Type>
+          <Name>MaximumHealth</Name>
+          <Description>Maximum health points of the target.</Description>
         </Field>
       </Fields>
     </Packet>

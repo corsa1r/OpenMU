@@ -5,8 +5,11 @@
 namespace MUnique.OpenMU.GameServer.RemoteView.World;
 
 using System.Runtime.InteropServices;
+using MUnique.OpenMU.AttributeSystem;
 using MUnique.OpenMU.GameLogic;
+using MUnique.OpenMU.GameLogic.Attributes;
 using MUnique.OpenMU.GameLogic.NPC;
+using MUnique.OpenMU.GameLogic.Views;
 using MUnique.OpenMU.GameLogic.Views.World;
 using MUnique.OpenMU.Network;
 using MUnique.OpenMU.Network.Packets.ServerToClient;
@@ -45,11 +48,39 @@ public class NewNpcsInScopePlugIn : INewNpcsInScopePlugIn
         if (npcs.Any())
         {
             await NpcsInScopeAsync(isSpawned, connection, npcs).ConfigureAwait(false);
+            await SendHpSyncAsync(connection, npcs.OfType<IAttackable>(), this._player).ConfigureAwait(false);
         }
 
         if (summons.Any())
         {
             await SummonedMonstersInScopeAsync(isSpawned, connection, summons).ConfigureAwait(false);
+            await SendHpSyncAsync(connection, summons.OfType<IAttackable>(), this._player).ConfigureAwait(false);
+        }
+    }
+
+    private static async ValueTask SendHpSyncAsync(IConnection connection, IEnumerable<IAttackable> attackables, RemotePlayer viewer)
+    {
+        foreach (var attackable in attackables)
+        {
+            var maxHp = attackable.Attributes[Stats.MaximumHealth];
+            if (maxHp <= 0 || float.IsNaN(maxHp))
+            {
+                continue;
+            }
+
+            var curHp = Math.Max(0f, attackable.Attributes[Stats.CurrentHealth]);
+            var healthStatus = (byte)Math.Round(curHp / maxHp * 250, MidpointRounding.AwayFromZero);
+
+            await connection.SendObjectHitExtendedAsync(
+                DamageKind.NormalRed,
+                false, false, false, false,
+                attackable.GetId(viewer),
+                healthStatus,
+                0xFF,
+                0,
+                0,
+                (uint)curHp,
+                (uint)maxHp).ConfigureAwait(false);
         }
     }
 
