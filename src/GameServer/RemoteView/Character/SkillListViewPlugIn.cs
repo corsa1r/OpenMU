@@ -4,6 +4,7 @@
 
 namespace MUnique.OpenMU.GameServer.RemoteView.Character;
 
+using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 using MUnique.OpenMU.DataModel.Configuration;
 using MUnique.OpenMU.DataModel.Entities;
@@ -142,6 +143,41 @@ public class SkillListViewPlugIn : ISkillListViewPlugIn
         }
 
         await connection.SendAsync(Write).ConfigureAwait(false);
+        await this.SendSkillComboConfigAsync(connection).ConfigureAwait(false);
+    }
+
+    private async ValueTask SendSkillComboConfigAsync(IConnection connection)
+    {
+        var comboSkills = this.SkillList
+            .OfType<Skill>()
+            .Where(s => s.ComboType != SkillComboType.None)
+            .ToList();
+
+        // C1 max payload = 255 bytes; header(5) + 4 bytes/entry → max 62 entries, more than enough.
+        var count = (byte)Math.Min(comboSkills.Count, (255 - 5) / 4);
+        var length = 5 + count * 4;
+
+        await connection.SendAsync(() =>
+        {
+            var span = connection.Output.GetSpan(length)[..length];
+            span[0] = 0xC1;
+            span[1] = (byte)length;
+            span[2] = 0xAB;
+            span[3] = 0x05;
+            span[4] = count;
+
+            var offset = 5;
+            for (var i = 0; i < count; i++)
+            {
+                var skill = comboSkills[i];
+                BinaryPrimitives.WriteUInt16BigEndian(span[offset..], (ushort)skill.Number);
+                span[offset + 2] = (byte)skill.ComboType;
+                span[offset + 3] = (byte)skill.ComboElement;
+                offset += 4;
+            }
+
+            return length;
+        }).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
