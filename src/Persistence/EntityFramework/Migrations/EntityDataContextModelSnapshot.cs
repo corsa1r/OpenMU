@@ -3183,6 +3183,21 @@ namespace MUnique.OpenMU.Persistence.EntityFramework.Migrations
                     b.Property<int>("AttackDamage")
                         .HasColumnType("integer");
 
+                    b.Property<int>("ComboType")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ComboElement")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PrimeDurationMs")
+                        .HasColumnType("integer");
+
+                    b.Property<float>("DetonationRadius")
+                        .HasColumnType("real");
+
+                    b.Property<float>("DamageMultiplier")
+                        .HasColumnType("real");
+
                     b.Property<int>("DamageType")
                         .HasColumnType("integer");
 

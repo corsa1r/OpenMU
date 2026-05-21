@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using MUnique.OpenMU.GameLogic.Attributes;
 using MUnique.OpenMU.GameLogic.NPC;
 using MUnique.OpenMU.GameLogic.PlugIns;
+using MUnique.OpenMU.GameLogic.PrimeState;
 using MUnique.OpenMU.GameLogic.Views.World;
 using MUnique.OpenMU.PlugIns;
 
@@ -266,6 +267,11 @@ public class TargetedSkillDefaultPlugin : TargetedSkillPluginBase
                     var hitInfo = await target.AttackByAsync(player, skillEntry, isCombo, 1, skill.NumberOfHitsPerAttack > 1 ? false : null).ConfigureAwait(false);
                     player.LastAttackedTarget.SetTarget(target);
                     success = await target.TryApplyElementalEffectsAsync(player, skillEntry, hitInfo).ConfigureAwait(false) || success;
+
+                    if (hitInfo.HasValue)
+                    {
+                        await ComboProcessor.ProcessHitAsync(player, target, skillEntry, hitInfo.Value).ConfigureAwait(false);
+                    }
 
                     for (int hit = 2; hit <= skill.NumberOfHitsPerAttack; hit++)
                     {

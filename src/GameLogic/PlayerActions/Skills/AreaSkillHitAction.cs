@@ -4,6 +4,8 @@
 
 namespace MUnique.OpenMU.GameLogic.PlayerActions.Skills;
 
+using MUnique.OpenMU.GameLogic.PrimeState;
+
 /// <summary>
 /// Action to hit targets with an area skill, which requires explicit hits <seealso cref="SkillType.AreaSkillExplicitHits"/>.
 /// </summary>
@@ -35,6 +37,11 @@ public class AreaSkillHitAction
         {
             var hitInfo = await target.AttackByAsync(player, skill, false).ConfigureAwait(false);
             await target.TryApplyElementalEffectsAsync(player, skill, hitInfo).ConfigureAwait(false);
+
+            if (hitInfo.HasValue)
+            {
+                await ComboProcessor.ProcessHitAsync(player, target, skill, hitInfo.Value).ConfigureAwait(false);
+            }
         }
     }
 }

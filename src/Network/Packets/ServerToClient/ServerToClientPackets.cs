@@ -6572,7 +6572,7 @@ public readonly struct ObjectHitExtended
     /// <summary>
     /// Gets the initial length of this data packet. When the size is dynamic, this value may be bigger than actually needed.
     /// </summary>
-    public static int Length => 16;
+    public static int Length => 24;
 
     /// <summary>
     /// Gets the header of this packet.
@@ -6667,6 +6667,24 @@ public readonly struct ObjectHitExtended
     {
         get => ReadUInt32LittleEndian(this._data.Span[12..]);
         set => WriteUInt32LittleEndian(this._data.Span[12..], value);
+    }
+
+    /// <summary>
+    /// Gets or sets actual current health points of the target.
+    /// </summary>
+    public uint CurrentHealth
+    {
+        get => ReadUInt32LittleEndian(this._data.Span[16..]);
+        set => WriteUInt32LittleEndian(this._data.Span[16..], value);
+    }
+
+    /// <summary>
+    /// Gets or sets maximum health points of the target.
+    /// </summary>
+    public uint MaximumHealth
+    {
+        get => ReadUInt32LittleEndian(this._data.Span[20..]);
+        set => WriteUInt32LittleEndian(this._data.Span[20..], value);
     }
 
     /// <summary>

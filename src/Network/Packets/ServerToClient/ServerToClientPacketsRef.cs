@@ -6521,7 +6521,7 @@ public readonly ref struct ObjectHitExtendedRef
     }
 
     /// <summary>
-    /// Gets or sets the actual current health points of the target.
+    /// Gets or sets actual current health points of the target.
     /// </summary>
     public uint CurrentHealth
     {
@@ -6530,7 +6530,7 @@ public readonly ref struct ObjectHitExtendedRef
     }
 
     /// <summary>
-    /// Gets or sets the maximum health points of the target.
+    /// Gets or sets maximum health points of the target.
     /// </summary>
     public uint MaximumHealth
     {

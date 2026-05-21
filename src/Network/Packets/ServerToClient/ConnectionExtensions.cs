@@ -1099,8 +1099,8 @@ public static class ConnectionExtensions
     /// <param name="shieldStatus">Gets or sets the status of the remaining shield in fractions of 1/250.</param>
     /// <param name="healthDamage">The health damage.</param>
     /// <param name="shieldDamage">The shield damage.</param>
-    /// <param name="currentHealth">The actual current health points of the target.</param>
-    /// <param name="maximumHealth">The maximum health points of the target.</param>
+    /// <param name="currentHealth">Actual current health points of the target.</param>
+    /// <param name="maximumHealth">Maximum health points of the target.</param>
     /// <remarks>
     /// Is sent by the server when: An object got hit in two cases: 1. When the own player is hit; 2. When the own player attacked some other object which got hit.
     /// Causes reaction on client side: The damage is shown at the object which received the hit.
