@@ -62,6 +62,8 @@ public class Player : AsyncDisposable, IBucketMapObserver, IAttackable, IAttacke
 
     private CancellationTokenSource? _respawnAfterDeathCts;
 
+    private readonly DpsMeter _dpsMeter = new();
+
     private Character? _selectedCharacter;
 
     private ICustomPlugInContainer<IViewPlugIn>? _viewPlugIns;
@@ -324,6 +326,11 @@ public class Player : AsyncDisposable, IBucketMapObserver, IAttackable, IAttacke
 
     /// <inheritdoc/>
     public AsyncReaderWriterLock ObserverLock { get; } = new();
+
+    /// <summary>
+    /// Gets the DPS meter for this player.
+    /// </summary>
+    public DpsMeter DpsMeter => this._dpsMeter;
 
     /// <inheritdoc/>
     public IPartyMember? LastPartyRequester { get; set; }
@@ -1453,6 +1460,24 @@ public class Player : AsyncDisposable, IBucketMapObserver, IAttackable, IAttacke
         {
             this._lastRegenerate = DateTime.UtcNow;
         }
+    }
+
+    /// <summary>
+    /// Broadcasts the current DPS to all nearby observers if the value has changed.
+    /// </summary>
+    public async ValueTask BroadcastDpsAsync()
+    {
+        if (this.PlayerState.CurrentState != GameLogic.PlayerState.EnteredWorld)
+        {
+            return;
+        }
+
+        if (!this._dpsMeter.TryGetUpdatedDps(out var dps))
+        {
+            return;
+        }
+
+        await this.ForEachWorldObserverAsync<IShowDpsPlugIn>(p => p.ShowDpsAsync(this, dps), true).ConfigureAwait(false);
     }
 
     /// <summary>

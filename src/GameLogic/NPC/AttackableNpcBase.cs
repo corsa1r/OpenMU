@@ -202,6 +202,7 @@ public abstract class AttackableNpcBase : NonPlayerCharacter, IAttackable
         var killed = this.TryHit(hitInfo.HealthDamage + hitInfo.ShieldDamage, attacker);
 
         var player = this.GetHitNotificationTarget(attacker);
+        player?.DpsMeter.RecordDamage(hitInfo.HealthDamage + hitInfo.ShieldDamage);
         if (player is not null)
         {
             if (isFinalStreakHit.HasValue)
