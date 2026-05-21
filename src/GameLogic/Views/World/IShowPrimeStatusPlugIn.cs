@@ -23,5 +23,6 @@ public interface IShowPrimeStatusPlugIn : IViewPlugIn
     ValueTask ShowPrimeClearedAsync(IAttackable target, SkillComboElement element);
 
     /// <summary>Tells the client to play the elemental detonation burst effect at <paramref name="target"/>'s position.</summary>
-    ValueTask ShowDetonationAsync(IAttackable target, SkillComboElement element);
+    /// <param name="detonationRadius">The splash radius of the detonation; controls which client-side effects fire.</param>
+    ValueTask ShowDetonationAsync(IAttackable target, SkillComboElement element, double detonationRadius);
 }

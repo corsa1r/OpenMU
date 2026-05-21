@@ -89,9 +89,10 @@ public static class ComboProcessor
             p => p.ShowPrimeClearedAsync(primaryTarget, skill.ComboElement))
             .ConfigureAwait(false);
 
+        var detonationRadius = skill.DetonationRadius;
         await NotifyObserversAsync(
             primaryTarget,
-            p => p.ShowDetonationAsync(primaryTarget, skill.ComboElement))
+            p => p.ShowDetonationAsync(primaryTarget, skill.ComboElement, detonationRadius))
             .ConfigureAwait(false);
 
         double multiplier = skill.DamageMultiplier;

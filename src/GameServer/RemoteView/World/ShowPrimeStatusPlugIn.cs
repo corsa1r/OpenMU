@@ -103,7 +103,7 @@ public sealed class ShowPrimeStatusPlugIn : IShowPrimeStatusPlugIn
     }
 
     /// <inheritdoc/>
-    public async ValueTask ShowDetonationAsync(IAttackable target, SkillComboElement element)
+    public async ValueTask ShowDetonationAsync(IAttackable target, SkillComboElement element, double detonationRadius)
     {
         if (_player.Connection is not { } connection)
         {
@@ -111,6 +111,7 @@ public sealed class ShowPrimeStatusPlugIn : IShowPrimeStatusPlugIn
         }
 
         var targetId = target.GetId(_player);
+        var radiusByte = (byte)Math.Min(255, Math.Round(detonationRadius));
 
         await connection.SendAsync(() =>
         {
@@ -121,7 +122,7 @@ public sealed class ShowPrimeStatusPlugIn : IShowPrimeStatusPlugIn
             span[3] = SubOpDetonated;
             BinaryPrimitives.WriteUInt16BigEndian(span[4..], targetId);
             span[6] = (byte)element;
-            span[7] = 0x00;
+            span[7] = radiusByte;
             return DetonatedPacketLength;
         }).ConfigureAwait(false);
     }
