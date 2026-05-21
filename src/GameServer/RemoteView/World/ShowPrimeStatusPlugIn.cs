@@ -44,8 +44,10 @@ public sealed class ShowPrimeStatusPlugIn : IShowPrimeStatusPlugIn
     private const byte PrimeStatusOperation = 0xAB;
     private const byte SubOpApplied = 0x01;
     private const byte SubOpCleared = 0x02;
+    private const byte SubOpDetonated = 0x03;
     private const int AppliedPacketLength = 12;
     private const int ClearedPacketLength = 7;
+    private const int DetonatedPacketLength = 8;
 
     private readonly RemotePlayer _player;
 
@@ -97,6 +99,30 @@ public sealed class ShowPrimeStatusPlugIn : IShowPrimeStatusPlugIn
             BinaryPrimitives.WriteUInt16BigEndian(span[4..], targetId);
             span[6] = (byte)element;
             return ClearedPacketLength;
+        }).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask ShowDetonationAsync(IAttackable target, SkillComboElement element)
+    {
+        if (_player.Connection is not { } connection)
+        {
+            return;
+        }
+
+        var targetId = target.GetId(_player);
+
+        await connection.SendAsync(() =>
+        {
+            var span = connection.Output.GetSpan(DetonatedPacketLength)[..DetonatedPacketLength];
+            span[0] = 0xC1;
+            span[1] = DetonatedPacketLength;
+            span[2] = PrimeStatusOperation;
+            span[3] = SubOpDetonated;
+            BinaryPrimitives.WriteUInt16BigEndian(span[4..], targetId);
+            span[6] = (byte)element;
+            span[7] = 0x00;
+            return DetonatedPacketLength;
         }).ConfigureAwait(false);
     }
 }

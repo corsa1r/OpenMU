@@ -21,4 +21,7 @@ public interface IShowPrimeStatusPlugIn : IViewPlugIn
 
     /// <summary>Informs the client that the prime mark on <paramref name="target"/> is gone.</summary>
     ValueTask ShowPrimeClearedAsync(IAttackable target, SkillComboElement element);
+
+    /// <summary>Tells the client to play the elemental detonation burst effect at <paramref name="target"/>'s position.</summary>
+    ValueTask ShowDetonationAsync(IAttackable target, SkillComboElement element);
 }

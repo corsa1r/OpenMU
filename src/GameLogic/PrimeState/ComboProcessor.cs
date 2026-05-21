@@ -83,10 +83,15 @@ public static class ComboProcessor
             return;
         }
 
-        // Immediately clear the prime icon from every nearby client.
+        // Clear the prime icon and trigger the detonation burst effect.
         await NotifyObserversAsync(
             primaryTarget,
             p => p.ShowPrimeClearedAsync(primaryTarget, skill.ComboElement))
+            .ConfigureAwait(false);
+
+        await NotifyObserversAsync(
+            primaryTarget,
+            p => p.ShowDetonationAsync(primaryTarget, skill.ComboElement))
             .ConfigureAwait(false);
 
         double multiplier = skill.DamageMultiplier;
