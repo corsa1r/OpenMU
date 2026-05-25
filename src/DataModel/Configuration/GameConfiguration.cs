@@ -39,6 +39,15 @@ public partial class GameConfiguration
     public float MasterExperienceRate { get; set; } = 1.0f;
 
     /// <summary>
+    /// Gets or sets the zen drop rate. Defaults to <c>1.0</c>. This multiplier is
+    /// applied independently of <see cref="ExperienceRate"/>, so admins can tune
+    /// economy and progression separately. When this value equals
+    /// <see cref="ExperienceRate"/> the resulting zen drops match legacy behaviour
+    /// (where zen was anchored to gained experience).
+    /// </summary>
+    public float ZenDropRate { get; set; } = 1.0f;
+
+    /// <summary>
     /// Gets or sets a value indicating whether experience overflow should be prevented.
     /// When <c>true</c>, if gaining experience would exceed the amount needed for the next level,
     /// only the necessary experience for the next level is gained, and the overflow is discarded.

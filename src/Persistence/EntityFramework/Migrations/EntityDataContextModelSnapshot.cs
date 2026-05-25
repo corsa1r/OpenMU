@@ -1073,6 +1073,9 @@ namespace MUnique.OpenMU.Persistence.EntityFramework.Migrations
                     b.Property<float>("MasterExperienceRate")
                         .HasColumnType("real");
 
+                    b.Property<float>("ZenDropRate")
+                        .HasColumnType("real");
+
                     b.Property<byte>("MaximumCharactersPerAccount")
                         .HasColumnType("smallint");
 

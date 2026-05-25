@@ -87,7 +87,15 @@ public class DefaultDropGenerator : IDropGenerator
         }
 
         uint money = 0;
-        var (droppedItems, moneyResult) = this.GenerateDrops(monster, gainedExperience);
+        // Decouple zen drops from ExperienceRate by computing a scale factor
+        // that undoes the global experience multiplier and re-applies the
+        // independent ZenDropRate. With ExperienceRate == ZenDropRate the
+        // factor is 1.0 and behaviour matches legacy zen-equals-exp drops.
+        var expRate = player.GameContext.ExperienceRate;
+        var zenRate = player.GameContext.Configuration.ZenDropRate;
+        var safeExpRate = expRate > 0 && !float.IsNaN(expRate) ? expRate : 1.0f;
+        var zenRateFactor = zenRate / safeExpRate;
+        var (droppedItems, moneyResult) = this.GenerateDrops(monster, gainedExperience, zenRateFactor);
         if (moneyResult > 0)
         {
             money = moneyResult;
@@ -270,7 +278,7 @@ public class DefaultDropGenerator : IDropGenerator
         return itemDefinition.MaximumDropLevel is not { } maxDropLevel || monsterLevel <= maxDropLevel;
     }
 
-    private (IList<Item>? Items, uint Money) GenerateDrops(MonsterDefinition monster, int gainedExperience)
+    private (IList<Item>? Items, uint Money) GenerateDrops(MonsterDefinition monster, int gainedExperience, float zenRateFactor)
     {
         uint money = 0;
         List<Item>? droppedItems = null;
@@ -284,7 +292,7 @@ public class DefaultDropGenerator : IDropGenerator
                 break;
             }
 
-            var item = this.GenerateItemDropOrMoney(monster, group, gainedExperience, out var droppedMoney);
+            var item = this.GenerateItemDropOrMoney(monster, group, gainedExperience, zenRateFactor, out var droppedMoney);
             if (item is not null)
             {
                 droppedItems ??= new List<Item>(monster.NumberOfMaximumItemDrops);
@@ -316,7 +324,7 @@ public class DefaultDropGenerator : IDropGenerator
                     continue;
                 }
 
-                var item = this.GenerateItemDropOrMoney(monster, group, gainedExperience, out var droppedMoney);
+                var item = this.GenerateItemDropOrMoney(monster, group, gainedExperience, zenRateFactor, out var droppedMoney);
                 if (item is not null)
                 {
                     droppedItems ??= new List<Item>(monster.NumberOfMaximumItemDrops);
@@ -500,7 +508,7 @@ public class DefaultDropGenerator : IDropGenerator
         }
     }
 
-    private Item? GenerateItemDropOrMoney(MonsterDefinition monster, DropItemGroup selectedGroup, int gainedExperience, out uint? droppedMoney)
+    private Item? GenerateItemDropOrMoney(MonsterDefinition monster, DropItemGroup selectedGroup, int gainedExperience, float zenRateFactor, out uint? droppedMoney)
     {
         droppedMoney = null;
 
@@ -512,7 +520,11 @@ public class DefaultDropGenerator : IDropGenerator
         var item = this.GenerateSpecialItem(monster, selectedGroup);
         if (item is null && selectedGroup.ItemType == SpecialItemType.Money)
         {
-            droppedMoney = (uint)(gainedExperience + BaseMoneyDrop);
+            // zenRateFactor = ZenDropRate / ExperienceRate, so the gained-exp
+            // anchor is normalised back to the pre-rate value and re-scaled
+            // by the zen rate. Floor at 0 to be safe against negative rates.
+            var scaledZen = Math.Max(0f, gainedExperience * zenRateFactor);
+            droppedMoney = (uint)(scaledZen + BaseMoneyDrop);
         }
 
         return item;
