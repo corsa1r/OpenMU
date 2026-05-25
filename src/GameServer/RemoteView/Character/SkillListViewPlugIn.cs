@@ -82,6 +82,17 @@ public class SkillListViewPlugIn : ISkillListViewPlugIn
 
         var skillIndex = this.AddSkillToList(skill);
         await this._player.Connection.SendSkillAddedAsync(skillIndex, (ushort)skill.Number, 0).ConfigureAwait(false);
+
+        // If the newly learned skill carries a Primer/Detonator role, the
+        // client's SkillCombo cache (populated at character entry) doesn't
+        // know about it yet — its tooltip would render plain until relog.
+        // Re-send the full combo config now so the new skill's combo info
+        // lands in cache and the inventory tooltip picks it up immediately.
+        if (skill.ComboType != SkillComboType.None
+            && this._player.Connection is { } connection)
+        {
+            await this.SendSkillComboConfigAsync(connection).ConfigureAwait(false);
+        }
     }
 
     /// <inheritdoc/>
