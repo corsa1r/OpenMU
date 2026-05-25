@@ -16,6 +16,20 @@ using MUnique.OpenMU.GameLogic.Views.World;
 public static class ComboProcessor
 {
     /// <summary>
+    /// Returns <c>true</c> when <paramref name="skill"/> is a Detonator and
+    /// <paramref name="target"/> currently carries a matching primer — i.e. the
+    /// upcoming hit would consume the primer and fire the detonation bonus.
+    /// Callers use this to decide whether to skip the skill's normal cast hit
+    /// (so only the multiplied detonation damage is dealt, not cast + bonus).
+    /// </summary>
+    public static bool WillDetonate(IAttackable target, Skill? skill)
+    {
+        return skill is { ComboType: SkillComboType.Detonator }
+               && target.IsAlive
+               && PrimeRegistry.HasActivePrime(target, skill.ComboElement);
+    }
+
+    /// <summary>
     /// Evaluates whether the skill carried by <paramref name="skillEntry"/> triggers
     /// Primer or Detonator behaviour and acts accordingly.
     /// No-ops instantly when <see cref="Skill.ComboType"/> is <see cref="SkillComboType.None"/>.
@@ -53,6 +67,15 @@ public static class ComboProcessor
 
     private static async ValueTask ApplyPrimerAsync(Player attacker, IAttackable target, Skill skill)
     {
+        // Don't apply primers to corpses — IAttackable references linger
+        // briefly after death (despawn delay, loot drop) and the registry's
+        // ConditionalWeakTable keeps state alive as long as the ref does, so
+        // a player could otherwise prime a corpse and detonate it.
+        if (!target.IsAlive)
+        {
+            return;
+        }
+
         var container = PrimeRegistry.GetOrCreate(target);
         var expiresAtMs = container.ApplyOrRefresh(skill.ComboElement, attacker, skill.PrimeDurationMs);
 
@@ -75,15 +98,43 @@ public static class ComboProcessor
         Skill skill,
         HitInfo primaryHit)
     {
-        var container = PrimeRegistry.GetOrCreate(primaryTarget);
-        var consumed = container.Consume(skill.ComboElement);
-
-        if (consumed is null)
+        // Mirror the IsAlive guard from ApplyPrimerAsync — never detonate a
+        // corpse. WillDetonate already checks this for the caller, but
+        // belt-and-braces here covers the path where ProcessHitAsync is
+        // invoked directly without WillDetonate.
+        if (!primaryTarget.IsAlive)
         {
             return;
         }
 
-        // Clear the prime icon and trigger the detonation burst effect.
+        var container = PrimeRegistry.GetOrCreate(primaryTarget);
+        if (!container.HasActivePrime(skill.ComboElement))
+        {
+            return;
+        }
+
+        double multiplier = skill.DamageMultiplier;
+
+        // Do-then-commit: roll the primary damage FIRST, before consuming the
+        // primer or sending visual notifications. If the attack roll misses
+        // (CalculateDamageAsync → IsAttackSuccessfulTo returns false), we
+        // abort the whole detonation — primer stays active for retry, no
+        // explosion effect plays, no "primer cleared" packet goes out. This
+        // prevents the silent-fizzle bug where the player saw effect+sound
+        // and lost the primer but took no damage.
+        //
+        // PvP balance is preserved: the defender's defense rate still
+        // dictates hit chance exactly as for a non-combo attack.
+        var hitInfo = await primaryTarget.AttackByAsync(attacker, skillEntry, isCombo: true, damageFactor: multiplier).ConfigureAwait(false);
+        if (hitInfo is null or { HealthDamage: 0, ShieldDamage: 0 })
+        {
+            return;
+        }
+
+        // Hit landed — commit: consume the primer, notify the client, then
+        // splash the radius.
+        container.Consume(skill.ComboElement);
+
         await NotifyObserversAsync(
             primaryTarget,
             p => p.ShowPrimeClearedAsync(primaryTarget, skill.ComboElement))
@@ -94,11 +145,6 @@ public static class ComboProcessor
             primaryTarget,
             p => p.ShowDetonationAsync(primaryTarget, skill.ComboElement, detonationRadius))
             .ConfigureAwait(false);
-
-        double multiplier = skill.DamageMultiplier;
-
-        // Apply explosion bonus to the primary target using the detonator skill so damageFactor is applied.
-        await primaryTarget.AttackByAsync(attacker, skillEntry, isCombo: true, damageFactor: multiplier).ConfigureAwait(false);
 
         var map = attacker.CurrentMap;
         if (map is null)

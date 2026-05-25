@@ -35,12 +35,22 @@ public class AreaSkillHitAction
 
         if (target.CheckSkillTargetRestrictions(player, skill.Skill))
         {
-            var hitInfo = await target.AttackByAsync(player, skill, false).ConfigureAwait(false);
-            await target.TryApplyElementalEffectsAsync(player, skill, hitInfo).ConfigureAwait(false);
-
-            if (hitInfo.HasValue)
+            if (ComboProcessor.WillDetonate(target, skill.Skill))
             {
-                await ComboProcessor.ProcessHitAsync(player, target, skill, hitInfo.Value).ConfigureAwait(false);
+                // See TargetedSkillDefaultPlugin: when a detonator lands on a
+                // matching primer, skip the cast hit so the player only deals
+                // the multiplied detonation damage (single gold COMBO popup).
+                await ComboProcessor.ProcessHitAsync(player, target, skill, default).ConfigureAwait(false);
+            }
+            else
+            {
+                var hitInfo = await target.AttackByAsync(player, skill, false).ConfigureAwait(false);
+                await target.TryApplyElementalEffectsAsync(player, skill, hitInfo).ConfigureAwait(false);
+
+                if (hitInfo.HasValue)
+                {
+                    await ComboProcessor.ProcessHitAsync(player, target, skill, hitInfo.Value).ConfigureAwait(false);
+                }
             }
         }
     }

@@ -264,18 +264,31 @@ public class TargetedSkillDefaultPlugin : TargetedSkillPluginBase
 
                 if (!target.IsAtSafezone() && !player.IsAtSafezone() && target != player)
                 {
-                    var hitInfo = await target.AttackByAsync(player, skillEntry, isCombo, 1, skill.NumberOfHitsPerAttack > 1 ? false : null).ConfigureAwait(false);
-                    player.LastAttackedTarget.SetTarget(target);
-                    success = await target.TryApplyElementalEffectsAsync(player, skillEntry, hitInfo).ConfigureAwait(false) || success;
-
-                    if (hitInfo.HasValue)
+                    if (ComboProcessor.WillDetonate(target, skill))
                     {
-                        await ComboProcessor.ProcessHitAsync(player, target, skillEntry, hitInfo.Value).ConfigureAwait(false);
+                        // Detonator landing on a matching-element primer: skip the
+                        // skill's normal cast hit entirely so the player only deals
+                        // the multiplied detonation damage (a single gold COMBO
+                        // popup on the client) instead of cast + bonus stacked.
+                        player.LastAttackedTarget.SetTarget(target);
+                        await ComboProcessor.ProcessHitAsync(player, target, skillEntry, default).ConfigureAwait(false);
+                        success = true;
                     }
-
-                    for (int hit = 2; hit <= skill.NumberOfHitsPerAttack; hit++)
+                    else
                     {
-                        await target.AttackByAsync(player, skillEntry, isCombo, 1, hit == skill.NumberOfHitsPerAttack).ConfigureAwait(false);
+                        var hitInfo = await target.AttackByAsync(player, skillEntry, isCombo, 1, skill.NumberOfHitsPerAttack > 1 ? false : null).ConfigureAwait(false);
+                        player.LastAttackedTarget.SetTarget(target);
+                        success = await target.TryApplyElementalEffectsAsync(player, skillEntry, hitInfo).ConfigureAwait(false) || success;
+
+                        if (hitInfo.HasValue)
+                        {
+                            await ComboProcessor.ProcessHitAsync(player, target, skillEntry, hitInfo.Value).ConfigureAwait(false);
+                        }
+
+                        for (int hit = 2; hit <= skill.NumberOfHitsPerAttack; hit++)
+                        {
+                            await target.AttackByAsync(player, skillEntry, isCombo, 1, hit == skill.NumberOfHitsPerAttack).ConfigureAwait(false);
+                        }
                     }
                 }
             }

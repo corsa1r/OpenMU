@@ -363,17 +363,28 @@ public class AreaSkillAttackAction
             return;
         }
 
-        var hitInfo = await target.AttackByAsync(player, skillEntry, isCombo, 1, skill.NumberOfHitsPerAttack > 1 ? false : null).ConfigureAwait(false);
-        await target.TryApplyElementalEffectsAsync(player, skillEntry, hitInfo).ConfigureAwait(false);
-
-        if (hitInfo.HasValue)
+        HitInfo? hitInfo = null;
+        if (ComboProcessor.WillDetonate(target, skill))
         {
-            await ComboProcessor.ProcessHitAsync(player, target, skillEntry, hitInfo.Value).ConfigureAwait(false);
+            // See TargetedSkillDefaultPlugin: detonator on matching primer
+            // skips the cast hit so only the multiplied detonation damage
+            // lands on the target (one gold COMBO popup, not cast + bonus).
+            await ComboProcessor.ProcessHitAsync(player, target, skillEntry, default).ConfigureAwait(false);
         }
-
-        for (int hit = 2; hit <= skill.NumberOfHitsPerAttack; hit++)
+        else
         {
-            await target.AttackByAsync(player, skillEntry, isCombo, 1, hit == skill.NumberOfHitsPerAttack).ConfigureAwait(false);
+            hitInfo = await target.AttackByAsync(player, skillEntry, isCombo, 1, skill.NumberOfHitsPerAttack > 1 ? false : null).ConfigureAwait(false);
+            await target.TryApplyElementalEffectsAsync(player, skillEntry, hitInfo).ConfigureAwait(false);
+
+            if (hitInfo.HasValue)
+            {
+                await ComboProcessor.ProcessHitAsync(player, target, skillEntry, hitInfo.Value).ConfigureAwait(false);
+            }
+
+            for (int hit = 2; hit <= skill.NumberOfHitsPerAttack; hit++)
+            {
+                await target.AttackByAsync(player, skillEntry, isCombo, 1, hit == skill.NumberOfHitsPerAttack).ConfigureAwait(false);
+            }
         }
 
         var baseSkill = skillEntry.GetBaseSkill();

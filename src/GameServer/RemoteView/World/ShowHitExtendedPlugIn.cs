@@ -58,7 +58,14 @@ public class ShowHitExtendedPlugIn : IShowHitPlugIn
             hitInfo.Attributes.HasFlag(DamageAttributes.RageFighterStreakHit),
             hitInfo.Attributes.HasFlag(DamageAttributes.RageFighterStreakFinalHit),
             hitInfo.Attributes.HasFlag(DamageAttributes.Double),
-            hitInfo.Attributes.HasFlag(DamageAttributes.Triple),
+            // The wire's IsTriple bit is reused by the BloodlustMU client as a
+            // "combo" flag — used to render detonator and chained-skill combo
+            // hits with distinct gold styling and a COMBO label. Triple damage
+            // (Rage Fighter streak) and Combo (detonator / classic skill combo)
+            // both qualify, and Triple is currently never set anywhere upstream
+            // so there is no behavioural conflict.
+            hitInfo.Attributes.HasFlag(DamageAttributes.Triple)
+                || hitInfo.Attributes.HasFlag(DamageAttributes.Combo),
             targetId,
             healthStatus,
             shieldStatus,

@@ -66,7 +66,11 @@ public class ShowHitPlugIn : IShowHitPlugIn
                 hitInfo.Attributes.HasFlag(DamageAttributes.RageFighterStreakHit),
                 hitInfo.Attributes.HasFlag(DamageAttributes.RageFighterStreakFinalHit),
                 hitInfo.Attributes.HasFlag(DamageAttributes.Double),
-                hitInfo.Attributes.HasFlag(DamageAttributes.Triple),
+                // See note in ShowHitExtendedPlugIn: BloodlustMU client reads
+                // bit 7 as "combo", so forward detonator/classic combo hits
+                // through the same flag.
+                hitInfo.Attributes.HasFlag(DamageAttributes.Triple)
+                    || hitInfo.Attributes.HasFlag(DamageAttributes.Combo),
                 shieldDamage).ConfigureAwait(false);
 
             remainingShieldDamage -= shieldDamage;
