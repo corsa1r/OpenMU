@@ -49,12 +49,37 @@ public class NewNpcsInScopePlugIn : INewNpcsInScopePlugIn
         {
             await NpcsInScopeAsync(isSpawned, connection, npcs).ConfigureAwait(false);
             await SendHpSyncAsync(connection, npcs.OfType<IAttackable>(), this._player).ConfigureAwait(false);
+            await SendMonsterLevelsAsync(npcs.OfType<IAttackable>()).ConfigureAwait(false);
         }
 
         if (summons.Any())
         {
             await SummonedMonstersInScopeAsync(isSpawned, connection, summons).ConfigureAwait(false);
             await SendHpSyncAsync(connection, summons.OfType<IAttackable>(), this._player).ConfigureAwait(false);
+        }
+    }
+
+    private async ValueTask SendMonsterLevelsAsync(IEnumerable<IAttackable> attackables)
+    {
+        // Push server-truth level for the floating health bar prefix. We pull
+        // from Stats.Level (the live attribute populated from MonsterDefinition
+        // at spawn) so an admin re-spawning a monster after a level change
+        // immediately reflects on the client.
+        var levelPlugIn = this._player.ViewPlugIns.GetPlugIn<IShowMonsterLevelPlugIn>();
+        if (levelPlugIn is null)
+        {
+            return;
+        }
+
+        foreach (var attackable in attackables)
+        {
+            var level = attackable.Attributes[Stats.Level];
+            if (level <= 0 || float.IsNaN(level))
+            {
+                continue;
+            }
+
+            await levelPlugIn.ShowMonsterLevelAsync(attackable, (ushort)level).ConfigureAwait(false);
         }
     }
 

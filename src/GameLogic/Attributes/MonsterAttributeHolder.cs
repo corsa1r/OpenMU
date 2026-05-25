@@ -33,6 +33,41 @@ public class MonsterAttributeHolder : IAttributeSystem
 
     private static readonly ConcurrentDictionary<MonsterDefinition, IDictionary<AttributeDefinition, float>> MonsterStatAttributesCache = new();
 
+    /// <summary>
+    /// Refreshes the cached stat-attribute dictionary for <paramref name="def"/> by re-reading
+    /// from <see cref="MonsterDefinition.Attributes"/>. The cached dict is mutated **in place**
+    /// so every live <see cref="MonsterAttributeHolder"/> sharing the reference picks up the
+    /// new values on its next read — no respawn required. Safe to call from any thread; the
+    /// per-dict mutation is done under a lock on the dict instance.
+    ///
+    /// Call this after admin-panel edits / config saves so server-side combat formulas
+    /// (defense, damage, level used in drop tables, etc.) immediately reflect the change.
+    /// </summary>
+    public static void RefreshAttributeCache(MonsterDefinition def)
+    {
+        if (!MonsterStatAttributesCache.TryGetValue(def, out var cached))
+        {
+            // No cache entry yet — next spawn will populate fresh from the new definition.
+            return;
+        }
+
+        // ToDictionary throws if AttributeDefinition is null; mirror the original
+        // factory's check by skipping null entries instead of asserting.
+        var fresh = def.Attributes
+            .Where(a => a.AttributeDefinition is not null)
+            .ToDictionary(a => a.AttributeDefinition!, a => a.Value);
+
+        // Mutate in place so existing instance references stay valid.
+        lock (cached)
+        {
+            cached.Clear();
+            foreach (var kv in fresh)
+            {
+                cached[kv.Key] = kv.Value;
+            }
+        }
+    }
+
     private readonly AttackableNpcBase _monster;
 
     private readonly IDictionary<AttributeDefinition, float> _statAttributes;

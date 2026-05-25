@@ -104,6 +104,16 @@ public class GameMap
     }
 
     /// <summary>
+    /// Snapshot of all live locateables (monsters, NPCs, drops, players) currently on this map.
+    /// Returned as a materialized list so callers can safely iterate without holding any lock —
+    /// the underlying dictionary may be mutated concurrently by spawn/despawn logic.
+    /// </summary>
+    public IReadOnlyList<ILocateable> GetAllLocateables()
+    {
+        return this._objectsInMap.Values.ToList();
+    }
+
+    /// <summary>
     /// Gets the attackables in range of the specified coordinates.
     /// </summary>
     /// <param name="point">The coordinates.</param>
