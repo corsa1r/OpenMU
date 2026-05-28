@@ -59,6 +59,11 @@ public static class MapPackageFormat
         /// <summary>Vertex lighting JPEG.</summary>
         public const string TerrainLight = "TerrainLight.OZJ";
 
+        /// <summary>Editor darkness mask (256×256 bytes, 0 = no darkening, 255 = fully black).
+        /// Consumed by the client's lighting bake when re-baking; stored as an opaque asset
+        /// server-side and shipped through as part of the .bmap round-trip.</summary>
+        public const string TerrainDarkness = "Darkness.dat";
+
         /// <summary>Source bank manifest (mirrors the editor's local <c>sources.json</c>).</summary>
         public const string SourcesManifest = "sources.json";
 

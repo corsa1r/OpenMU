@@ -404,11 +404,6 @@ public enum UpdateVersion
     FinishDarkLordMasterTree = 79,
 
     /// <summary>
-    /// The version of the <see cref="AddSkillCombosUpdatePlugIn"/>.
-    /// </summary>
-    AddSkillCombos = 80,
-
-    /// <summary>
     /// The version of the <see cref="AddCrywolfSecondFloorPlugIn"/>.
     /// </summary>
     AddCrywolfSecondFloor = 81,

@@ -392,7 +392,15 @@ internal class EntityFrameworkContextBase : IContext
     {
         var propertyToParent = entry.Properties
             .FirstOrDefault(p => p.Metadata.IsForeignKey()
-                                 && (p.Metadata.IsShadowProperty() || p.Metadata.PropertyInfo?.GetCustomAttribute<IsLinkToParentAttribute>() is not null));
+                                 && (p.Metadata.IsShadowProperty()
+                                     || p.Metadata.PropertyInfo?.GetCustomAttribute<IsLinkToParentAttribute>() is not null
+                                     // Auto-detect ownership: an FK whose principal end has a collection
+                                     // navigation back to this entity is an owner-link, even if the
+                                     // generated property doesn't carry [IsLinkToParent]. Catches cases
+                                     // like MonsterSpawnArea.GameMapId, where the cache-add path was
+                                     // bailing out and live admin-panel additions never propagated to
+                                     // the running server's in-memory parent collection.
+                                     || p.Metadata.GetContainingForeignKeys().Any(fk => fk.PrincipalToDependent?.IsCollection == true)));
 
         var parentId = (Guid?)(propertyToParent?.CurrentValue ?? propertyToParent?.OriginalValue);
         if (parentId is null)

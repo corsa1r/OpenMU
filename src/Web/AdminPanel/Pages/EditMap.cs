@@ -14,6 +14,8 @@ using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using MUnique.OpenMU.DataModel.Configuration;
+using MUnique.OpenMU.GameLogic;
+using MUnique.OpenMU.Interfaces;
 using MUnique.OpenMU.Persistence;
 using MUnique.OpenMU.Web.AdminPanel.Properties;
 using MUnique.OpenMU.Web.Shared;
@@ -55,6 +57,14 @@ public sealed class EditMap : ComponentBase, IDisposable
     /// </summary>
     [Inject]
     private IDataSource<GameConfiguration> GameConfigurationSource { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the running game servers. Used to hot-reload the
+    /// edited map's <see cref="GameMap"/> instance after a save so spawn
+    /// changes take effect immediately without a server restart.
+    /// </summary>
+    [Inject]
+    private IDictionary<int, IGameServer> GameServers { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets the logger.
@@ -240,11 +250,49 @@ public sealed class EditMap : ComponentBase, IDisposable
             var success = await context.SaveChangesAsync().ConfigureAwait(true);
             var text = success ? Resources.SavedChanges : Resources.NoChangesToSave;
             this.ToastService.ShowSuccess(text);
+
+            if (success)
+            {
+                await this.ReloadEditedMapOnServersAsync().ConfigureAwait(true);
+            }
         }
         catch (Exception ex)
         {
             this.Logger.LogError(ex, "Error during saving");
             this.ToastService.ShowError(string.Format(Resources.UnexpectedErrorCheckLogs, ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// Drops the cached <see cref="GameMap"/> instance for the currently-edited
+    /// map on every running game server. Without this, the in-memory map still
+    /// references the pre-save <see cref="GameMapDefinition.MonsterSpawns"/>
+    /// collection so old monsters keep respawning even after the admin panel
+    /// shows the changes — same gap that the map-package import already fills.
+    /// Best-effort: errors are logged but never surface to the user.
+    /// </summary>
+    private async Task ReloadEditedMapOnServersAsync()
+    {
+        var editedMap = this._maps?.FirstOrDefault(m => m.GetId() == this.SelectedMapId);
+        if (editedMap is null)
+        {
+            return;
+        }
+
+        var mapId = (ushort)editedMap.Number;
+        foreach (var server in this.GameServers.Values)
+        {
+            if (server is IGameServerContextProvider provider)
+            {
+                try
+                {
+                    await provider.Context.ReloadMapAsync(mapId).ConfigureAwait(true);
+                }
+                catch (Exception ex)
+                {
+                    this.Logger.LogWarning(ex, "Failed to reload map {MapId} on server {ServerId} after edit", mapId, server.Id);
+                }
+            }
         }
     }
 
