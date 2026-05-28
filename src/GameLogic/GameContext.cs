@@ -240,6 +240,52 @@ public class GameContext : AsyncDisposable, IGameContext
         return createdMap;
     }
 
+    /// <inheritdoc/>
+    public async ValueTask<int> ReloadMapAsync(ushort mapId)
+    {
+        GameMap? toDrop;
+        List<Player> playersOnMap;
+
+        using (await this._mapInitializerLock.LockAsync().ConfigureAwait(false))
+        {
+            if (!this._mapList.TryGetValue(mapId, out toDrop))
+            {
+                return 0;
+            }
+
+            playersOnMap = toDrop.GetAllLocateables().OfType<Player>().ToList();
+
+            // Remove from cache BEFORE warping players. That way, if a player's
+            // safezone happens to be this same map (rare for custom maps), the
+            // subsequent GetMapAsync inside WarpToSafezoneAsync rebuilds a fresh
+            // instance with the latest TerrainData rather than reusing the stale one.
+            this._mapList.Remove(mapId);
+        }
+
+        foreach (var player in playersOnMap)
+        {
+            try
+            {
+                await player.WarpToSafezoneAsync().ConfigureAwait(false);
+            }
+            catch
+            {
+                // If safezone warp fails for any reason, drop the connection — a player
+                // referencing a torn-down map is worse than a brief disconnect.
+                try
+                {
+                    await player.DisconnectAsync().ConfigureAwait(false);
+                }
+                catch
+                {
+                    // Best-effort cleanup; don't propagate.
+                }
+            }
+        }
+
+        return playersOnMap.Count;
+    }
+
     /// <summary>
     /// Gets the mini game map which is meant to be hosted by the game.
     /// </summary>

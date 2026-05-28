@@ -7,6 +7,14 @@ services:
     restart: "no"
     ports:
       - "8081:8080"
+    environment:
+      # Bind-mount the editor's custom-maps output so save-and-warp iteration
+      # doesn't require Export -> Import. Staging/prod should NOT have this override.
+      CUSTOM_MAPS_PATH: /app/custom-maps
+    volumes:
+      # MuMain editor saves to <repo>/MuMain/src/bin/Data/World/Custom/<WorldN>/.
+      # all-in-one compose runs from <repo>/OpenMU/deploy/all-in-one/ — three up to MuMain.
+      - ../../../MuMain/src/bin/Data/World/Custom:/app/custom-maps
 
   database:
     ports:

@@ -70,6 +70,13 @@ public partial class GameMapDefinition
     public int Discriminator { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether this map is a custom map authored in the in-game editor
+    /// (assets live under <c>Data\World\Custom\WorldN+1\</c> on the client).
+    /// When true, clients render terrain/objects from the custom slot instead of the classic <c>Data\WorldN+1\</c> path.
+    /// </summary>
+    public bool IsCustomMap { get; set; }
+
+    /// <summary>
     /// Gets or sets the game map to which the player will be brought when it died.
     /// One of the <see cref="ExitGates"/> where <see cref="ExitGate.IsSpawnGate"/> is selected.
     /// </summary>

@@ -149,6 +149,16 @@ public interface IGameContext
     ValueTask<GameMap?> GetMapAsync(ushort mapId, bool createIfNotExists = true);
 
     /// <summary>
+    /// Drops the cached <see cref="GameMap"/> for the specified map number and warps any
+    /// players currently on it back to their safezone. The next <see cref="GetMapAsync"/>
+    /// call for that id will instantiate a fresh map from the latest
+    /// <see cref="GameMapDefinition"/> (including any updated <c>TerrainData</c>).
+    /// </summary>
+    /// <param name="mapId">Map number to reload.</param>
+    /// <returns>The number of players that were warped off the map.</returns>
+    ValueTask<int> ReloadMapAsync(ushort mapId);
+
+    /// <summary>
     /// Gets the mini game map which is meant to be hosted by the game.
     /// </summary>
     /// <param name="miniGameDefinition">The mini game definition.</param>

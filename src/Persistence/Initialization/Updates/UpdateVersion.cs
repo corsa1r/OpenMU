@@ -407,4 +407,9 @@ public enum UpdateVersion
     /// The version of the <see cref="AddSkillCombosUpdatePlugIn"/>.
     /// </summary>
     AddSkillCombos = 80,
+
+    /// <summary>
+    /// The version of the <see cref="AddCrywolfSecondFloorPlugIn"/>.
+    /// </summary>
+    AddCrywolfSecondFloor = 81,
 }

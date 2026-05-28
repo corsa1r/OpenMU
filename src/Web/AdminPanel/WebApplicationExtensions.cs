@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Hosting.StaticWebAssets;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using MUnique.OpenMU.CustomMaps;
 using MUnique.OpenMU.DataModel;
 using MUnique.OpenMU.DataModel.Configuration;
 using MUnique.OpenMU.DataModel.Entities;
@@ -86,6 +87,12 @@ public static class WebApplicationExtensions
         services.AddScoped<IDataService<LoggedInAccount>>(serviceProvider => serviceProvider.GetService<LoggedInAccountService>()!);
         services.AddScoped<OfflineAccountService>();
         services.AddScoped<IDataService<OfflineAccount>>(serviceProvider => serviceProvider.GetService<OfflineAccountService>()!);
+
+        // Custom map package services. Filesystem store is configured via $CUSTOM_MAPS_PATH;
+        // singleton because it's stateless and reads its root once on construction.
+        services.AddSingleton<MapAssetStore>(_ => MapAssetStore.FromEnvironment());
+        services.AddScoped<MapPackageImportService>();
+        services.AddScoped<MapPackageExportService>();
 
         StaticWebAssetsLoader.UseStaticWebAssets(builder.Environment, builder.Configuration);
         return builder;

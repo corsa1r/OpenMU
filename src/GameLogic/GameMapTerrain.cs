@@ -15,7 +15,13 @@ public class GameMapTerrain
     /// <summary>
     /// The default terrain where all coordinates are walkable and not a safezone.
     /// </summary>
-    private static readonly byte[] DefaultTerrain = Enumerable.Repeat<byte>(0, short.MaxValue).ToArray();
+    /// <remarks>
+    /// Must cover the full 256x256 grid (65536 tiles) — the previous <c>short.MaxValue</c>
+    /// only covered y ∈ [0..127], leaving the upper half permanently unwalkable for any
+    /// map with null <see cref="GameMapDefinition.TerrainData"/> (e.g. custom maps imported
+    /// before their .att is plumbed into the DB).
+    /// </remarks>
+    private static readonly byte[] DefaultTerrain = Enumerable.Repeat<byte>(0, 256 * 256).ToArray();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="GameMapTerrain"/> class.

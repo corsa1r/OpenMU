@@ -54,6 +54,11 @@
                     <ConfigNavMenu GameConfigurationId="@gameConfigurationId" />
                 }
                 <li>
+                    <NavLink href="maps/packages" @onclick="() => NavigationHistory.Clear()">
+                        <span class="oi oi-box" aria-hidden="true"></span> Map Packages
+                    </NavLink>
+                </li>
+                <li>
                     <NavLink href="setup" @onclick="() => NavigationHistory.Clear()">
                         <span class="oi oi-cog" aria-hidden="true"></span> @Resources.Setup
                     </NavLink>

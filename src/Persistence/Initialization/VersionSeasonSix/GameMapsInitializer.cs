@@ -43,6 +43,7 @@ public class GameMapsInitializer : GameMapsInitializerBase
             yield return typeof(Aida);
             yield return typeof(Vulcanus);
             yield return typeof(CrywolfFortress);
+            yield return typeof(CrywolfSecondFloor);
             yield return typeof(LandOfTrials);
             yield return typeof(LorenMarket);
             yield return typeof(SantaVillage);

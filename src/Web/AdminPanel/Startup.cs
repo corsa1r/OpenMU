@@ -13,8 +13,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using MUnique.OpenMU.CustomMaps;
 using MUnique.OpenMU.DataModel.Entities;
 using MUnique.OpenMU.Web.AdminPanel.Components;
+using MUnique.OpenMU.Web.AdminPanel.Services;
 using MUnique.OpenMU.Web.Shared;
 using MUnique.OpenMU.Web.Shared.Models;
 using MUnique.OpenMU.Web.Shared.Services;
@@ -71,6 +73,11 @@ public class Startup
         services.AddSingleton<ILookupController, PersistentObjectsLookupController>();
 
         services.AddScoped<IChangeNotificationService, ChangeNotificationService>();
+
+        // Custom map package import — backed by a filesystem store rooted at $CUSTOM_MAPS_PATH (defaults to /app/custom-maps).
+        services.AddSingleton<MapAssetStore>(_ => MapAssetStore.FromEnvironment());
+        services.AddScoped<MapPackageImportService>();
+        services.AddScoped<MapPackageExportService>();
     }
 
     /// <summary>

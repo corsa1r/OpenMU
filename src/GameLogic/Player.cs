@@ -2519,6 +2519,10 @@ public class Player : AsyncDisposable, IBucketMapObserver, IAttackable, IAttacke
             this._comboStateLazy = new Lazy<ComboStateMachine>(() => ComboStateMachine.Create(comboDefinition));
         }
 
+        // Push the server-authoritative map manifest + warp list so the client can render its
+        // Move List UI and pick the right (classic vs. custom) world folder when warping.
+        await this.InvokeViewPlugInAsync<IShowCustomMapManifestPlugIn>(p => p.ShowAsync()).ConfigureAwait(false);
+
         await this.InvokeViewPlugInAsync<IUpdateCharacterStatsPlugIn>(p => p.UpdateCharacterStatsAsync()).ConfigureAwait(false);
         await this.InvokeViewPlugInAsync<IUpdateInventoryListPlugIn>(p => p.UpdateInventoryListAsync()).ConfigureAwait(false);
         await this.InvokeViewPlugInAsync<ISkillListViewPlugIn>(p => p.UpdateSkillListAsync()).ConfigureAwait(false);
