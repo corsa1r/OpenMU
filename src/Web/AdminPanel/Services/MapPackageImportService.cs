@@ -22,16 +22,19 @@ public sealed class MapPackageImportService
     private readonly IPersistenceContextProvider _contextProvider;
     private readonly MapAssetStore _assetStore;
     private readonly IDictionary<int, MUnique.OpenMU.Interfaces.IGameServer> _gameServers;
+    private readonly IDataSource<GameConfiguration> _gameConfigurationSource;
 
     /// <summary>Initializes a new instance of the <see cref="MapPackageImportService"/> class.</summary>
     public MapPackageImportService(
         IPersistenceContextProvider contextProvider,
         MapAssetStore assetStore,
-        IDictionary<int, MUnique.OpenMU.Interfaces.IGameServer> gameServers)
+        IDictionary<int, MUnique.OpenMU.Interfaces.IGameServer> gameServers,
+        IDataSource<GameConfiguration> gameConfigurationSource)
     {
         this._contextProvider = contextProvider;
         this._assetStore = assetStore;
         this._gameServers = gameServers;
+        this._gameConfigurationSource = gameConfigurationSource;
     }
 
     /// <summary>Imports a map package from a stream.</summary>
@@ -165,6 +168,21 @@ public sealed class MapPackageImportService
             // The asset files are already on disk. They'll be overwritten on next successful import,
             // but the partial state is harmless until then.
             return MapPackageImportResult.Failed("Failed to persist DB changes after writing assets.");
+        }
+
+        // The admin panel uses a long-lived singleton IDataSource<GameConfiguration> that
+        // caches the entire object graph in memory. SaveChangesAsync above wrote through a
+        // separate context, so the cached singleton still holds the pre-import state —
+        // the Map editor in the admin panel would render TerrainData as null and show all
+        // tiles as walkable. Force the singleton to reload from the DB on next access.
+        try
+        {
+            await this._gameConfigurationSource.ForceDiscardChangesAsync().ConfigureAwait(false);
+        }
+        catch
+        {
+            // Best-effort cache invalidation; if it fails, a manual admin-panel refresh
+            // will still pick up the changes from the DB.
         }
 
         // Hot-reload the map on every running game server so live GameMap instances pick up
