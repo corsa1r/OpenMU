@@ -277,6 +277,24 @@ public sealed class MapPackageImportService
             }
         }
 
+        // Seed drop groups from Lorencia (map 0) by reference, so the custom map
+        // has a working loot economy out of the box. They share the same
+        // DropItemGroup rows by default — per-map tuning on /drop-rates triggers
+        // clone-on-edit, splitting off a dedicated row for this map only.
+        // Without this seed, monsters on the new map drop nothing.
+        const short SeedFromMapNumber = 0; // Lorencia
+        var seedMap = gameConfiguration.Maps.FirstOrDefault(m => m.Number == SeedFromMapNumber);
+        if (seedMap is not null && !ReferenceEquals(seedMap, map))
+        {
+            foreach (var group in seedMap.DropItemGroups)
+            {
+                if (!map.DropItemGroups.Contains(group))
+                {
+                    map.DropItemGroups.Add(group);
+                }
+            }
+        }
+
         return map;
     }
 
