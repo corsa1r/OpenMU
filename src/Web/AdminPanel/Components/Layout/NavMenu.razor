@@ -59,6 +59,11 @@
                     </NavLink>
                 </li>
                 <li>
+                    <NavLink href="drop-rates" @onclick="() => NavigationHistory.Clear()">
+                        <span class="oi oi-dollar" aria-hidden="true"></span> Drop Rates
+                    </NavLink>
+                </li>
+                <li>
                     <NavLink href="setup" @onclick="() => NavigationHistory.Clear()">
                         <span class="oi oi-cog" aria-hidden="true"></span> @Resources.Setup
                     </NavLink>

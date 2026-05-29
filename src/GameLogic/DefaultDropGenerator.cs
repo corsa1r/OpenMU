@@ -32,13 +32,11 @@ public class DefaultDropGenerator : IDropGenerator
 
     private readonly AsyncLock _lock = new();
     private readonly IRandomizer _randomizer;
+    private readonly GameConfiguration _config;
     private readonly IList<ItemDefinition> _ancientItems;
     private readonly IList<ItemDefinition> _droppableItems;
     private readonly IList<ItemDefinition>?[] _droppableItemsPerMonsterLevel = new IList<ItemDefinition>?[byte.MaxValue + 1];
     private readonly IList<ItemDefinition>?[] _droppableSocketItemsPerMonsterLevel = new IList<ItemDefinition>?[byte.MaxValue + 1];
-
-    private readonly byte _maxItemOptionLevelDrop;
-    private readonly byte _excellentItemDropLevelDelta;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultDropGenerator" /> class.
@@ -47,11 +45,8 @@ public class DefaultDropGenerator : IDropGenerator
     /// <param name="randomizer">The randomizer.</param>
     public DefaultDropGenerator(GameConfiguration config, IRandomizer randomizer)
     {
-        this._excellentItemDropLevelDelta = config.ExcellentItemDropLevelDelta;
+        this._config = config;
         this._randomizer = randomizer;
-        this._maxItemOptionLevelDrop = IsValidOptionLevelDrop(config.MaximumItemOptionLevelDrop)
-            ? config.MaximumItemOptionLevelDrop
-            : DefaultMaxItemOptionLevelDrop;
         this._droppableItems = config.Items.Where(i => i.DropsFromMonsters).ToList();
         this._ancientItems = this._droppableItems.Where(
             i => i.PossibleItemSetGroups.Any(
@@ -59,6 +54,23 @@ public class DefaultDropGenerator : IDropGenerator
                     o => object.Equals(o.OptionType, ItemOptionTypes.AncientOption)) ?? false))
             .ToList();
     }
+
+    /// <summary>
+    /// Live-read of <see cref="GameConfiguration.MaximumItemOptionLevelDrop"/> with a
+    /// safe fallback. Live-read so admin-panel edits take effect on the next drop
+    /// without rebuilding the generator.
+    /// </summary>
+    private byte CurrentMaxItemOptionLevelDrop =>
+        IsValidOptionLevelDrop(this._config.MaximumItemOptionLevelDrop)
+            ? this._config.MaximumItemOptionLevelDrop
+            : DefaultMaxItemOptionLevelDrop;
+
+    /// <summary>
+    /// Live-read of <see cref="GameConfiguration.ExcellentItemDropLevelDelta"/>. Same
+    /// rationale as <see cref="CurrentMaxItemOptionLevelDrop"/> — picked up on each
+    /// call so the admin panel can tune the delta without a server restart.
+    /// </summary>
+    private byte CurrentExcellentItemDropLevelDelta => this._config.ExcellentItemDropLevelDelta;
 
     /// <inheritdoc/>
     public async ValueTask<(IEnumerable<Item> Items, uint? Money)> GenerateItemDropsAsync(MonsterDefinition monster, int gainedExperience, Player player)
@@ -187,12 +199,13 @@ public class DefaultDropGenerator : IDropGenerator
     /// <returns>A random excellent item.</returns>
     protected Item? GenerateRandomExcellentItem(int monsterLevel = 0, ICollection<ItemDefinition>? possibleItems = null)
     {
-        if (monsterLevel < this._excellentItemDropLevelDelta && possibleItems is null)
+        var delta = this.CurrentExcellentItemDropLevelDelta;
+        if (monsterLevel < delta && possibleItems is null)
         {
             return null;
         }
 
-        var possible = possibleItems ?? this.GetPossibleList(monsterLevel - this._excellentItemDropLevelDelta);
+        var possible = possibleItems ?? this.GetPossibleList(monsterLevel - delta);
         var item = this.GenerateRandomItem(possible);
         if (item is null)
         {
@@ -418,7 +431,7 @@ public class DefaultDropGenerator : IDropGenerator
                         .Select(ldo => ldo.Level)
                         .Concat(newOption.LevelDependentOptions.Count > 0 ? [1] : []) // For base def/dmg opts level 1 is not an ItemOptionOfLevel entry
                         .Distinct()
-                        .Where(l => l <= this._maxItemOptionLevelDrop)
+                        .Where(l => l <= this.CurrentMaxItemOptionLevelDrop)
                         .DefaultIfEmpty(0)
                         .SelectRandom(),
                 };

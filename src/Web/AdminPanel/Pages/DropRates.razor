@@ -1,0 +1,237 @@
+@page "/drop-rates"
+@using MUnique.OpenMU.DataModel.Configuration
+@using MUnique.OpenMU.DataModel.Configuration.Items
+@using MUnique.OpenMU.Persistence
+
+<h3>Drop Rates</h3>
+
+@if (this._gameConfig is null)
+{
+    <p><em>Loading...</em></p>
+    return;
+}
+
+<div class="d-flex gap-2 align-items-center mb-3">
+    <button class="btn btn-primary" @onclick="this.SaveAsync" disabled="@this._isSaving">
+        @(this._isSaving ? "Saving..." : "Save")
+    </button>
+    <button class="btn btn-secondary" @onclick="this.ReloadAsync" disabled="@this._isSaving">Reload</button>
+    <button class="btn btn-outline-warning" @onclick="this.CleanUnusedAsync" disabled="@this._isSaving"
+            title="Deletes drop groups in the master list that aren't referenced by any map, monster, character, or quest. Safe — they had no runtime effect.">
+        Clean unused
+    </button>
+    @if (!string.IsNullOrEmpty(this._statusMessage))
+    {
+        <span class="@this._statusCssClass">@this._statusMessage</span>
+    }
+</div>
+
+@* ── Global rates ───────────────────────────────────────────────── *@
+<div class="card mb-4">
+    <div class="card-header"><strong>Global rates</strong></div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Experience rate</label>
+                <input class="form-control" type="number" step="0.01" min="0"
+                       @bind="this._gameConfig.ExperienceRate" />
+                <small class="text-muted">Multiplier applied to gained XP.</small>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Master experience rate</label>
+                <input class="form-control" type="number" step="0.01" min="0"
+                       @bind="this._gameConfig.MasterExperienceRate" />
+                <small class="text-muted">Multiplier for master-level XP.</small>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Zen drop rate</label>
+                <input class="form-control" type="number" step="0.01" min="0"
+                       @bind="this._gameConfig.ZenDropRate" />
+                <small class="text-muted">Independent of experience rate.</small>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Excellent item drop level delta</label>
+                <input class="form-control" type="number" min="0" max="255"
+                       @bind="this._gameConfig.ExcellentItemDropLevelDelta" />
+                <small class="text-muted">Monster level must be at least this much above an item's drop level for it to roll excellent.</small>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Maximum item option level drop (1–4)</label>
+                <input class="form-control" type="number" min="1" max="4"
+                       @bind="this._gameConfig.MaximumItemOptionLevelDrop" />
+                <small class="text-muted">Caps the random +N option level on dropped items.</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ── Drop groups by item type ───────────────────────────────────── *@
+<div class="card mb-4">
+    <div class="card-header"><strong>Drop groups</strong></div>
+    <div class="card-body">
+        <ul class="nav nav-tabs mb-3">
+            @foreach (var (type, label) in DropTabs)
+            {
+                var t = type;
+                <li class="nav-item">
+                    <a class="nav-link @(this._selectedTab == t ? "active" : string.Empty)"
+                       href="javascript:void(0)" @onclick="() => this._selectedTab = t">
+                        @label (@this._groupsByType[t].Count)
+                    </a>
+                </li>
+            }
+        </ul>
+
+        <div class="mb-2">
+            <input class="form-control form-control-sm" placeholder="Filter by source or description..."
+                   @bind="this._dropSearch" @bind:event="oninput" />
+        </div>
+
+        @{
+            var rows = this.FilteredRows(this._selectedTab).ToList();
+        }
+
+        <small class="text-muted">Showing @rows.Count of @this._groupsByType[this._selectedTab].Count rows.</small>
+
+        @if (rows.Count == 0)
+        {
+            <p class="text-muted mt-2">No drop groups match.</p>
+        }
+        else
+        {
+            <table class="table table-striped table-sm align-middle mt-2">
+                <thead>
+                    <tr>
+                        <th>Source</th>
+                        <th>Description</th>
+                        <th style="width:90px" title="How many owners reference this group. Editing clones a per-owner copy.">Shared</th>
+                        <th style="width:160px">Chance (0.0 – 1.0)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in rows)
+                    {
+                        var localRow = row;
+                        <tr>
+                            <td>@localRow.Source</td>
+                            <td>@(string.IsNullOrEmpty(localRow.Group.Description) ? "(no description)" : localRow.Group.Description)</td>
+                            <td>
+                                @if (localRow.SharedOwners > 1)
+                                {
+                                    <span class="badge bg-warning text-dark" title="Referenced by @localRow.SharedOwners owners. Editing will clone it.">
+                                        @localRow.SharedOwners×
+                                    </span>
+                                }
+                                else if (localRow.IsCustomized)
+                                {
+                                    <span class="badge bg-success" title="This owner now has its own copy of the group.">Custom</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">solo</span>
+                                }
+                            </td>
+                            <td>
+                                <input class="form-control form-control-sm" type="number" step="0.0001" min="0" max="1"
+                                       value="@localRow.Group.Chance.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                       @onchange="@(args => this.OnChanceChangedAsync(localRow, args))" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@* ── Excellent option AddChance / MaximumOptionsPerItem ─────────── *@
+<div class="card mb-4">
+    <div class="card-header"><strong>Excellent option rolls</strong></div>
+    <div class="card-body">
+        <p class="text-muted small">
+            The first excellent option always gets added. <em>AddChance</em> is the probability for each
+            additional roll up to <em>Maximum options per item</em>.
+        </p>
+        @if (this._excellentOptionDefs.Count == 0)
+        {
+            <p class="text-muted">No item-option definitions of type Excellent found.</p>
+        }
+        else
+        {
+            <div class="mb-2">
+                <input class="form-control form-control-sm" placeholder="Filter excellent options..."
+                       @bind="this._excellentSearch" @bind:event="oninput" />
+            </div>
+            <table class="table table-sm table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Definition</th>
+                        <th style="width:160px">AddChance</th>
+                        <th style="width:160px">Maximum options per item</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var def in this.FilterByName(this._excellentOptionDefs, this._excellentSearch))
+                    {
+                        var localDef = def;
+                        <tr>
+                            <td>@localDef.Name</td>
+                            <td>
+                                <input class="form-control form-control-sm" type="number" step="0.01" min="0" max="1"
+                                       @bind="localDef.AddChance" />
+                            </td>
+                            <td>
+                                <input class="form-control form-control-sm" type="number" min="0" max="8"
+                                       @bind="localDef.MaximumOptionsPerItem" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@* ── Luck option AddChance ─────────────────────────────────────── *@
+<div class="card mb-4">
+    <div class="card-header"><strong>Luck option rolls</strong></div>
+    <div class="card-body">
+        @if (this._luckOptionDefs.Count == 0)
+        {
+            <p class="text-muted">No item-option definitions of type Luck found.</p>
+        }
+        else
+        {
+            <div class="mb-2">
+                <input class="form-control form-control-sm" placeholder="Filter luck options..."
+                       @bind="this._luckSearch" @bind:event="oninput" />
+            </div>
+            <table class="table table-sm table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Definition</th>
+                        <th style="width:160px">AddChance</th>
+                        <th style="width:160px">Maximum options per item</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var def in this.FilterByName(this._luckOptionDefs, this._luckSearch))
+                    {
+                        var localDef = def;
+                        <tr>
+                            <td>@localDef.Name</td>
+                            <td>
+                                <input class="form-control form-control-sm" type="number" step="0.01" min="0" max="1"
+                                       @bind="localDef.AddChance" />
+                            </td>
+                            <td>
+                                <input class="form-control form-control-sm" type="number" min="0" max="8"
+                                       @bind="localDef.MaximumOptionsPerItem" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
